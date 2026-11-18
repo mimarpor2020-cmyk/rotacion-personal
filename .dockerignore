@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+tunel_ngrok.py
+tunel_localtunnel.sh
+tunel_localtunnel.bat

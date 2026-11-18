@@ -1,0 +1,10 @@
+# Dependencias para el servidor en internet (Render). Versiones fijas = las del entorno probado.
+# Sin TensorFlow: la red se evalúa con NumPy (red_numpy.py + modelo/pesos_red.npz),
+# así la app cabe en los 512 MB de RAM del plan gratuito.
+flask==3.1.3
+gunicorn==23.0.0
+scikit-learn==1.6.1
+numpy==2.5.4
+pandas==3.0.6
+joblib==1.6.0
+requests==2.34.2

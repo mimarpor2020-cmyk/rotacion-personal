@@ -1,0 +1,7 @@
+Copia aquí los tres archivos que genera el notebook (sección 16):
+
+  modelo_attrition.keras
+  preprocessor.pkl
+  config_modelo.json
+
+Vienen dentro de artefactos_modelo.zip, que el notebook descarga al final.

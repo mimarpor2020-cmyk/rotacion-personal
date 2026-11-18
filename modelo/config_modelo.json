@@ -1,0 +1,269 @@
+{
+  "nombre_modelo": "RNA_Attrition_FocalLoss",
+  "umbral_decision": 0.5,
+  "margen_confianza": 0.2,
+  "columnas_entrada": [
+    "Age",
+    "BusinessTravel",
+    "DailyRate",
+    "Department",
+    "DistanceFromHome",
+    "Education",
+    "EducationField",
+    "EnvironmentSatisfaction",
+    "Gender",
+    "HourlyRate",
+    "JobInvolvement",
+    "JobLevel",
+    "JobRole",
+    "JobSatisfaction",
+    "MaritalStatus",
+    "MonthlyIncome",
+    "MonthlyRate",
+    "NumCompaniesWorked",
+    "OverTime",
+    "PercentSalaryHike",
+    "PerformanceRating",
+    "RelationshipSatisfaction",
+    "StockOptionLevel",
+    "TotalWorkingYears",
+    "TrainingTimesLastYear",
+    "WorkLifeBalance",
+    "YearsAtCompany",
+    "YearsInCurrentRole",
+    "YearsSinceLastPromotion",
+    "YearsWithCurrManager"
+  ],
+  "variables_numericas_crudas": [
+    "Age",
+    "DailyRate",
+    "DistanceFromHome",
+    "Education",
+    "EnvironmentSatisfaction",
+    "HourlyRate",
+    "JobInvolvement",
+    "JobLevel",
+    "JobSatisfaction",
+    "MonthlyIncome",
+    "MonthlyRate",
+    "NumCompaniesWorked",
+    "PercentSalaryHike",
+    "PerformanceRating",
+    "RelationshipSatisfaction",
+    "StockOptionLevel",
+    "TotalWorkingYears",
+    "TrainingTimesLastYear",
+    "WorkLifeBalance",
+    "YearsAtCompany",
+    "YearsInCurrentRole",
+    "YearsSinceLastPromotion",
+    "YearsWithCurrManager"
+  ],
+  "variables_categoricas": [
+    "BusinessTravel",
+    "Department",
+    "EducationField",
+    "Gender",
+    "JobRole",
+    "MaritalStatus",
+    "OverTime"
+  ],
+  "categorias_validas": {
+    "BusinessTravel": [
+      "Non-Travel",
+      "Travel_Frequently",
+      "Travel_Rarely"
+    ],
+    "Department": [
+      "Human Resources",
+      "Research & Development",
+      "Sales"
+    ],
+    "EducationField": [
+      "Human Resources",
+      "Life Sciences",
+      "Marketing",
+      "Medical",
+      "Other",
+      "Technical Degree"
+    ],
+    "Gender": [
+      "Female",
+      "Male"
+    ],
+    "JobRole": [
+      "Healthcare Representative",
+      "Human Resources",
+      "Laboratory Technician",
+      "Manager",
+      "Manufacturing Director",
+      "Research Director",
+      "Research Scientist",
+      "Sales Executive",
+      "Sales Representative"
+    ],
+    "MaritalStatus": [
+      "Divorced",
+      "Married",
+      "Single"
+    ],
+    "OverTime": [
+      "No",
+      "Yes"
+    ]
+  },
+  "rangos_numericos": {
+    "Age": [
+      18,
+      60
+    ],
+    "DailyRate": [
+      102,
+      1499
+    ],
+    "DistanceFromHome": [
+      1,
+      29
+    ],
+    "Education": [
+      1,
+      5
+    ],
+    "EnvironmentSatisfaction": [
+      1,
+      4
+    ],
+    "HourlyRate": [
+      30,
+      100
+    ],
+    "JobInvolvement": [
+      1,
+      4
+    ],
+    "JobLevel": [
+      1,
+      5
+    ],
+    "JobSatisfaction": [
+      1,
+      4
+    ],
+    "MonthlyIncome": [
+      1009,
+      19999
+    ],
+    "MonthlyRate": [
+      2094,
+      26999
+    ],
+    "NumCompaniesWorked": [
+      0,
+      9
+    ],
+    "PercentSalaryHike": [
+      11,
+      25
+    ],
+    "PerformanceRating": [
+      3,
+      4
+    ],
+    "RelationshipSatisfaction": [
+      1,
+      4
+    ],
+    "StockOptionLevel": [
+      0,
+      3
+    ],
+    "TotalWorkingYears": [
+      0,
+      40
+    ],
+    "TrainingTimesLastYear": [
+      0,
+      6
+    ],
+    "WorkLifeBalance": [
+      1,
+      4
+    ],
+    "YearsAtCompany": [
+      0,
+      40
+    ],
+    "YearsInCurrentRole": [
+      0,
+      18
+    ],
+    "YearsSinceLastPromotion": [
+      0,
+      15
+    ],
+    "YearsWithCurrManager": [
+      0,
+      17
+    ]
+  },
+  "valores_por_defecto": {
+    "Age": 36,
+    "BusinessTravel": "Travel_Rarely",
+    "DailyRate": 797,
+    "Department": "Research & Development",
+    "DistanceFromHome": 7,
+    "Education": 3,
+    "EducationField": "Life Sciences",
+    "EnvironmentSatisfaction": 3,
+    "Gender": "Male",
+    "HourlyRate": 66,
+    "JobInvolvement": 3,
+    "JobLevel": 2,
+    "JobRole": "Sales Executive",
+    "JobSatisfaction": 3,
+    "MaritalStatus": "Married",
+    "MonthlyIncome": 4908,
+    "MonthlyRate": 15178,
+    "NumCompaniesWorked": 2,
+    "OverTime": "No",
+    "PercentSalaryHike": 14,
+    "PerformanceRating": 3,
+    "RelationshipSatisfaction": 3,
+    "StockOptionLevel": 1,
+    "TotalWorkingYears": 10,
+    "TrainingTimesLastYear": 3,
+    "WorkLifeBalance": 3,
+    "YearsAtCompany": 5,
+    "YearsInCurrentRole": 3,
+    "YearsSinceLastPromotion": 1,
+    "YearsWithCurrManager": 3
+  },
+  "n_features_modelo": 58,
+  "metricas_prueba": {
+    "Modelo": "RNA focal (umbral calibrado)",
+    "Umbral": 0.5,
+    "Accuracy": 0.8823529411764706,
+    "Error": 0.11764705882352944,
+    "Precision": 0.8125,
+    "Recall": 0.3611111111111111,
+    "F1": 0.5,
+    "ROC-AUC": 0.7363363363363363,
+    "PR-AUC": 0.5148501525338354
+  },
+  "metricas_datos_nuevos": {
+    "Modelo": "RNA focal – datos nuevos",
+    "Umbral": 0.5,
+    "Accuracy": 0.8503401360544217,
+    "Error": 0.1496598639455783,
+    "Precision": 0.625,
+    "Recall": 0.20833333333333334,
+    "F1": 0.3125,
+    "ROC-AUC": 0.7672764227642277,
+    "PR-AUC": 0.5191059664997132
+  },
+  "versiones": {
+    "tensorflow": "2.21.0",
+    "keras": "3.13.2",
+    "scikit-learn": "1.6.1"
+  }
+}

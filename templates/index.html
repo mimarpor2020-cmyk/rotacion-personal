@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Riesgo de rotación de personal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="cabecera">
+    <div class="cabecera-int">
+      <div class="marca">
+        <h1>Riesgo de rotación de personal</h1>
+        <p>Red neuronal sobre IBM HR Attrition, recomendaciones de {{ llm_nombre }} y un agente que aprende de tus calificaciones. Simulación, Universidad de Córdoba.</p>
+      </div>
+      <nav class="nav" aria-label="Secciones"><a href="/" aria-current="page">Predicción</a><a href="/aprendizaje">Aprendizaje del agente</a></nav>
+    </div>
+  </header>
+
+  {% if error_carga %}
+  <div class="aviso aviso-error" role="alert"><strong>El modelo no está cargado.</strong> {{ error_carga }}</div>
+  {% endif %}
+  {% if aviso %}
+  <div class="aviso" role="status">{{ aviso }}</div>
+  {% endif %}
+
+  <main class="principal">
+    <form id="formulario" class="formulario" method="post" action="/" novalidate>
+      <div class="ejemplos">
+        <p class="ejemplos-etq">Cargar un perfil de ejemplo</p>
+        <div class="ejemplos-lista">
+          {% for clave, (nombre, _) in ejemplos.items() %}
+          <a href="/?ejemplo={{ clave }}" class="ejemplo{% if ejemplo == clave %} activo{% endif %}"
+             {% if ejemplo == clave %}aria-current="true"{% endif %}>{{ nombre }}</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% for gid, gnombre in grupos %}
+      <fieldset class="grupo">
+        <legend>{{ gnombre }}</legend>
+        <div class="campos">
+          {% for c in campos if c.grupo == gid %}
+          {% set err = errores.get(c.nombre) %}
+          <div class="campo{% if err %} con-error{% endif %}" data-campo="{{ c.nombre }}">
+            <label for="f-{{ c.nombre }}">{{ c.etiqueta }}</label>
+            {% if c.tipo == 'sel' %}
+            <select id="f-{{ c.nombre }}" name="{{ c.nombre }}" {% if err %}aria-invalid="true"{% endif %}>
+              {% for v, t in c.opciones %}
+              <option value="{{ v }}" {% if valores.get(c.nombre)|string == v|string %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+            {% else %}
+            {% set r = rango(c.nombre) %}
+            <div class="numero">
+              <input id="f-{{ c.nombre }}" name="{{ c.nombre }}" type="number" inputmode="numeric" step="1" min="0"
+                     value="{{ valores.get(c.nombre) }}" {% if r %}placeholder="{{ r[0] }}–{{ r[1] }}"{% endif %}
+                     {% if err %}aria-invalid="true"{% endif %} aria-describedby="e-{{ c.nombre }}">
+              {% if c.sufijo %}<span class="sufijo">{{ c.sufijo }}</span>{% endif %}
+            </div>
+            {% endif %}
+            <p class="error" id="e-{{ c.nombre }}">{{ err or '' }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% endfor %}
+
+      <button type="submit" class="boton">Calcular riesgo</button>
+      <p class="nota-envio">El resultado se actualiza solo al cambiar cualquier dato.</p>
+    </form>
+
+    <aside class="panel" id="panel" aria-live="polite" aria-labelledby="titulo-resultado">
+      <div id="resultado" class="resultado{% if not resultado %} vacio{% endif %}"
+           data-umbral="{{ umbral }}" data-margen="{{ margen }}"
+           style="--p: {{ resultado.porcentaje if resultado else 0 }}">
+        <div class="instrumento" data-clase="{{ 'si' if resultado and resultado.abandona else 'no' }}">
+          <h2 id="titulo-resultado">Probabilidad de que deje la empresa</h2>
+          <p class="prob"><span class="lectura"><span id="prob-num">{{ ('%.1f'|format(resultado.porcentaje)).replace('.', ',') if resultado else '–' }}</span><span class="pct">%</span></span></p>
+
+          <div class="escala" role="img" id="escala"
+               aria-label="Escala de probabilidad con el umbral de decisión en {{ (umbral*100)|round(0)|int }} %">
+            {% set u = umbral * 100 %}{% set m = margen * 100 %}
+            <div class="zona zona-no" style="left:0;width:{{ [u - m, 0]|max }}%"></div>
+            <div class="zona zona-duda" style="left:{{ [u - m, 0]|max }}%;width:{{ [u + m, 100]|min - [u - m, 0]|max }}%"></div>
+            <div class="zona zona-si" style="left:{{ [u + m, 100]|min }}%;right:0"></div>
+            <div class="umbral" style="left:{{ u }}%"></div>
+            <div class="aguja" id="aguja"></div>
+          </div>
+          <div class="escala-leyenda" aria-hidden="true">
+            <span>Se queda</span><span>Zona de duda, umbral {{ u|round(0)|int }} %</span><span>Se va</span>
+          </div>
+
+          <p class="veredicto" id="veredicto">
+            {% if resultado %}
+              {% if resultado.abandona %}El modelo predice que se irá.{% else %}El modelo predice que permanecerá en la empresa.{% endif %}
+            {% endif %}
+          </p>
+          <p class="confianza" id="confianza">
+            {% if resultado %}
+              {% if resultado.confianza == 'alta' %}Confianza alta: la probabilidad está lejos del umbral.
+              {% else %}Confianza baja: el caso está cerca del umbral; conviene revisarlo con Recursos Humanos.{% endif %}
+            {% endif %}
+          </p>
+        </div>
+
+        <div class="detalle">
+          <h3>Qué pesa más en este caso</h3>
+          <p class="explica">Puntos que cambia la probabilidad si ese dato tuviera el valor típico de la empresa.</p>
+          <ul class="factores" id="factores">
+            {% if resultado %}
+            {% set tope = resultado.factores|map(attribute='delta')|map('abs')|max if resultado.factores else 1 %}
+            {% for f in resultado.factores %}
+            <li class="{{ 'sube' if f.delta > 0 else 'baja' }}">
+              <span class="f-texto">{{ f.variable }}: <strong>{{ f.valor }}</strong></span>
+              <span class="f-delta">{{ '+' if f.delta > 0 else '' }}{{ ('%.1f'|format(f.delta)).replace('.', ',') }} pts</span>
+              <span class="f-barra" aria-hidden="true"><span style="width:{{ (f.delta|abs) / tope * 100 }}%"></span></span>
+            </li>
+            {% else %}
+            <li class="neutro">Es un perfil típico: ningún dato se aparta del promedio.</li>
+            {% endfor %}
+            {% endif %}
+          </ul>
+
+          <ul class="advertencias" id="advertencias">
+            {% for a in advertencias %}<li>{{ a }}</li>{% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <section class="ia" id="ia" aria-labelledby="titulo-ia">
+        <div class="ia-cab">
+          <h2 id="titulo-ia">Recomendaciones para Recursos Humanos</h2>
+          <p class="explica">{{ llm_nombre }} redacta un plan a partir de esta predicción. Un agente de aprendizaje por refuerzo elige el estilo y aprende de tu calificación.</p>
+        </div>
+        {% if not llm_activo %}
+        <p class="aviso-ia">Para activar esta sección define la variable <code>GROQ_API_KEY</code> (clave gratis en console.groq.com) y reinicia el servidor.</p>
+        {% endif %}
+        <button type="button" class="boton-ia" id="btn-recomendar" {% if not llm_activo %}disabled{% endif %}>Generar recomendaciones</button>
+        <p class="ia-estado" id="ia-estado" role="status"></p>
+
+        <article class="rec" id="rec" hidden>
+          <p class="rec-meta" id="rec-meta"></p>
+          <p class="rec-diag" id="rec-diag"></p>
+          <ol class="rec-acciones" id="rec-acciones"></ol>
+          <div id="rec-preguntas-caja" hidden>
+            <h3>Preguntas para la conversación</h3>
+            <ul class="rec-preguntas" id="rec-preguntas"></ul>
+          </div>
+          <p class="rec-seg"><strong>Seguimiento.</strong> <span id="rec-seg"></span></p>
+          <p class="rec-cuenta" id="rec-cuenta"></p>
+
+          <form class="feedback" id="feedback">
+            <fieldset>
+              <legend>¿Qué tan útil fue esta recomendación?</legend>
+              <div class="estrellas">
+                {% for i in range(5, 0, -1) %}
+                <input type="radio" name="estrellas" id="est-{{ i }}" value="{{ i }}">
+                <label for="est-{{ i }}" title="{{ i }} de 5"><span class="sr">{{ i }} de 5 estrellas</span></label>
+                {% endfor %}
+              </div>
+            </fieldset>
+            <label class="fb-etq" for="fb-comentario">Comentario opcional: qué le sobra o le falta</label>
+            <textarea id="fb-comentario" name="comentario" rows="2" maxlength="500"></textarea>
+            <button type="submit" class="boton-ia secundario" id="btn-feedback" disabled>Enviar calificación</button>
+            <div class="fb-resultado" id="fb-resultado" role="status"></div>
+          </form>
+        </article>
+      </section>
+
+      {% if metricas %}
+      <details class="ficha">
+        <summary>Cómo se comporta el modelo</summary>
+        <p>Medido con empleados que el modelo nunca vio:</p>
+        <table>
+          <thead><tr><th></th><th>Prueba</th><th>Datos nuevos</th></tr></thead>
+          <tbody>
+            <tr><th>Accuracy</th><td>{{ '%.3f'|format(metricas.Accuracy) }}</td><td>{{ '%.3f'|format(metricas_nuevos.Accuracy) }}</td></tr>
+            <tr><th>Error</th><td>{{ '%.3f'|format(metricas.Error) }}</td><td>{{ '%.3f'|format(metricas_nuevos.Error) }}</td></tr>
+            <tr><th>Recall (se va)</th><td>{{ '%.3f'|format(metricas.Recall) }}</td><td>{{ '%.3f'|format(metricas_nuevos.Recall) }}</td></tr>
+            <tr><th>ROC-AUC</th><td>{{ '%.3f'|format(metricas['ROC-AUC']) }}</td><td>{{ '%.3f'|format(metricas_nuevos['ROC-AUC']) }}</td></tr>
+          </tbody>
+        </table>
+        <p>Es una estimación estadística, no una decisión: úsala para priorizar conversaciones, no para juzgar a una persona.</p>
+      </details>
+      {% endif %}
+    </aside>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aprendizaje del agente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% set p = estado.parametros %}
+  {% macro n2(x) %}{{ ('%.2f'|format(x)).replace('.', ',') }}{% endmacro %}
+  <header class="cabecera">
+    <div class="cabecera-int">
+      <div class="marca">
+        <h1>Aprendizaje del agente</h1>
+        <p>Cada calificación que das a una recomendación de {{ llm_nombre }} es una recompensa. El agente la usa para elegir la estrategia de la próxima recomendación en cada nivel de riesgo.</p>
+      </div>
+      <nav class="nav" aria-label="Secciones"><a href="/">Predicción</a><a href="/aprendizaje" aria-current="page">Aprendizaje del agente</a></nav>
+    </div>
+  </header>
+
+  <main class="pagina">
+    <section class="tarjeta tarjeta-oscura">
+      <p class="resumen-num">
+        <span><strong>{{ estado.generadas }}</strong>recomendaciones generadas</span>
+        <span><strong>{{ estado.calificadas }}</strong>calificadas por usuarios</span>
+        {% if estado.curva %}<span><strong>{{ '+' if estado.curva[-1] > 0 }}{{ n2(estado.curva[-1]) }}</strong>recompensa promedio</span>{% endif %}
+      </p>
+      <h2 style="margin-top:22px">Cómo aprende</h2>
+      <dl class="formulacion">
+        <div><dt>Estado <i>s</i></dt><dd>Nivel de riesgo que da la red neuronal: bajo, zona de duda o alto.</dd></div>
+        <div><dt>Acción <i>a</i></dt><dd>Estrategia de prompt con la que el LLM redacta la recomendación ({{ estrategias|length }} opciones).</dd></div>
+        <div><dt>Recompensa <i>r</i></dt><dd><code>r = (estrellas − 3) / 2</code>: 1★ = −1, 3★ = 0, 5★ = +1.</dd></div>
+        <div><dt>Política</dt><dd>ε-greedy con ε = {{ n2(p.epsilon) }}: el {{ (p.epsilon * 100)|int }} % de las veces explora una estrategia al azar; el resto usa la de mayor <i>Q</i>.</dd></div>
+        <div><dt>Actualización</dt><dd><code>Q(s,a) ← Q(s,a) + α [r − Q(s,a)]</code>, con <code>α = máx(1/N, {{ n2(p.alfa_min) }})</code>. Valor inicial optimista Q₀ = {{ n2(p.q_inicial) }} para que pruebe todas las estrategias.</dd></div>
+        <div><dt>Memoria</dt><dd>Los comentarios de las recomendaciones bien y mal valoradas se incluyen en el siguiente prompt de esa misma estrategia.</dd></div>
+      </dl>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Valor aprendido de cada estrategia</h2>
+      <p class="explica">Q(s, a) es la recompensa esperada, de −1 a +1. La estrategia marcada es la que el agente usará al explotar.</p>
+      <div class="q-contextos">
+        {% for c in estado.contextos %}
+        <div class="q-contexto">
+          <h3>{{ c.nombre }}</h3>
+          <table class="q-tabla">
+            <thead><tr><th>Estrategia</th><th>Q</th><th>N</th></tr></thead>
+            <tbody>
+              {% for e in c.estrategias %}
+              {% set ancho = (e.q|abs) * 50 %}
+              <tr class="{{ 'preferida' if e.id == c.preferida }}"
+                  title="{{ e.nombre }}: Q = {{ n2(e.q) }} con {{ e.n }} calificaciones{% if e.estrellas %}, promedio {{ n2(e.estrellas) }}★{% endif %}">
+                <th scope="row">{% if e.id == c.preferida %}<span class="marca-pref" aria-label="preferida">▶</span> {% endif %}{{ e.nombre }}</th>
+                <td>
+                  {% if e.n %}
+                  <span class="q-valor">{{ '+' if e.q > 0 }}{{ n2(e.q) }}</span>
+                  <span class="q-barra" aria-hidden="true"><span class="q-relleno {{ 'pos' if e.q >= 0 else 'neg' }}"
+                        style="{{ 'left:50%' if e.q >= 0 else 'right:50%' }};width:{{ ancho }}%"></span></span>
+                  {% else %}<span class="sin-datos">sin probar</span>{% endif %}
+                </td>
+                <td class="num">{{ e.n }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Recompensa promedio acumulada</h2>
+      <p class="explica">Si sube, las recomendaciones están gustando más a medida que el agente aprende.</p>
+      {% set curva = estado.curva %}
+      {% if curva|length >= 2 %}
+      {% set W, H, M = 640, 220, 32 %}
+      {% set alto, ancho_x, ult = H - 2 * M, W - 2 * M, curva|length - 1 %}
+      <figure class="curva" id="curva" data-puntos='{{ curva|tojson }}'>
+        <svg viewBox="0 0 {{ W }} {{ H }}" preserveAspectRatio="xMinYMid meet" role="img" aria-label="Recompensa promedio acumulada tras {{ curva|length }} calificaciones: termina en {{ n2(curva[-1]) }}">
+          {% for v in [1, 0.5, 0, -0.5, -1] %}
+          {% set yv = M + (1 - v) / 2 * alto %}
+          <line x1="{{ M }}" x2="{{ W - M }}" y1="{{ yv }}" y2="{{ yv }}" class="{{ 'eje-cero' if v == 0 else 'rejilla' }}"/>
+          <text x="{{ M - 6 }}" y="{{ yv }}" class="eje-txt" text-anchor="end" dominant-baseline="middle">{{ '+' if v > 0 }}{{ ('%g'|format(v)).replace('.', ',') }}</text>
+          {% endfor %}
+          <text x="{{ M }}" y="{{ H - 8 }}" class="eje-txt">1</text>
+          <text x="{{ W - M }}" y="{{ H - 8 }}" class="eje-txt" text-anchor="end">{{ curva|length }} calificaciones</text>
+          <polyline class="linea" points="{% for v in curva %}{{ M + loop.index0 / ult * ancho_x }},{{ M + (1 - v) / 2 * alto }} {% endfor %}"/>
+          <circle class="punto-final" cx="{{ W - M }}" cy="{{ M + (1 - curva[-1]) / 2 * alto }}" r="4"/>
+          <line class="cursor" id="cursor" y1="{{ M }}" y2="{{ H - M }}"/>
+          <circle class="punto-hover" id="punto-hover" r="5"/>
+          <rect class="zona-hover" id="zona-hover" x="{{ M }}" y="{{ M }}" width="{{ W - 2 * M }}" height="{{ H - 2 * M }}"
+                data-m="{{ M }}" data-w="{{ W }}" data-h="{{ H }}"/>
+        </svg>
+        <div class="tooltip" id="tooltip" hidden></div>
+      </figure>
+      {% else %}
+      <p class="sin-datos">La curva aparece a partir de dos calificaciones.</p>
+      {% endif %}
+    </section>
+
+    <section class="tarjeta">
+      <h2>Últimas calificaciones</h2>
+      {% if estado.recientes %}
+      <div class="tabla-scroll">
+        <table class="historial">
+          <thead><tr><th>Fecha</th><th>Riesgo</th><th>Estrategia</th><th>Elección</th><th>Estrellas</th><th>Comentario</th></tr></thead>
+          <tbody>
+            {% for f in estado.recientes %}
+            <tr>
+              <td class="num">{{ f.fecha }}</td><td>{{ f.contexto }}</td><td>{{ f.estrategia }}</td>
+              <td>{{ 'Exploración' if f.explorando else 'Explotación' }}</td>
+              <td class="num"><span class="estrellas-txt" aria-hidden="true">{{ '★' * f.estrellas }}{{ '☆' * (5 - f.estrellas) }}</span><span class="sr">{{ f.estrellas }} de 5</span></td>
+              <td>{{ f.comentario or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="sin-datos">Aún no hay calificaciones. Genera una recomendación en la página de predicción y califícala.</p>
+      {% endif %}
+    </section>
+
+    <section class="tarjeta">
+      <h2>Estrategias disponibles</h2>
+      <ul class="estrategias">
+        {% for k, e in estrategias.items() %}<li><strong>{{ e.nombre }}</strong>{{ e.descripcion }}</li>{% endfor %}
+      </ul>
+    </section>
+  </main>
+
+  <script>
+  // Tooltip de la curva: muestra el valor de la calificación más cercana al cursor
+  (function () {
+    const fig = document.getElementById("curva");
+    if (!fig) return;
+    const pts = JSON.parse(fig.dataset.puntos);
+    const zona = document.getElementById("zona-hover");
+    const cursor = document.getElementById("cursor");
+    const punto = document.getElementById("punto-hover");
+    const tip = document.getElementById("tooltip");
+    const M = +zona.dataset.m, W = +zona.dataset.w, H = +zona.dataset.h;
+    const svg = fig.querySelector("svg");
+    const fmt = (v) => (v > 0 ? "+" : "") + v.toLocaleString("es-CO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function mover(ev) {
+      const caja = svg.getBoundingClientRect();
+      const xSvg = (ev.clientX - caja.left) / caja.width * W;
+      const i = Math.max(0, Math.min(pts.length - 1, Math.round((xSvg - M) / (W - 2 * M) * (pts.length - 1))));
+      const x = M + i / (pts.length - 1) * (W - 2 * M);
+      const y = M + (1 - pts[i]) / 2 * (H - 2 * M);
+      cursor.setAttribute("x1", x); cursor.setAttribute("x2", x);
+      punto.setAttribute("cx", x); punto.setAttribute("cy", y);
+      fig.classList.add("activo");
+      tip.hidden = false;
+      tip.textContent = `Calificación ${i + 1}: promedio ${fmt(pts[i])}`;
+      const px = x / W * caja.width;
+      tip.style.left = Math.min(Math.max(px, 70), caja.width - 70) + "px";
+      tip.style.top = (y / H * caja.height - 12) + "px";
+    }
+    zona.addEventListener("pointermove", mover);
+    zona.addEventListener("pointerleave", () => { fig.classList.remove("activo"); tip.hidden = true; });
+  })();
+  </script>
+</body>
+</html>

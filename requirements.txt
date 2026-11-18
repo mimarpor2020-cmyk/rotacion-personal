@@ -1,0 +1,10 @@
+# Usa la MISMA versión de scikit-learn con la que se entrenó en Colab
+# (aparece en modelo/config_modelo.json -> "versiones"). Ejemplo: scikit-learn==1.6.1
+flask>=3.0
+tensorflow>=2.16        # Keras 3: necesario para leer archivos .keras guardados en Colab
+scikit-learn
+pandas
+numpy
+joblib
+pyngrok>=7.0
+requests                # llamadas a la API de Groq (LLM)
